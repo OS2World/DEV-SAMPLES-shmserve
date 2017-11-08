@@ -1,0 +1,116 @@
+Shared Memory Suballocation Sample Code v1.1
+For OS/2 Warp
+
+==============================================
+Use PKUNZIP to unzip the contents of the ZIP file
+into a single directory.
+
+==============================================
+To RUN:
+Open an OS/2 Window session, and execute the server
+SHMSERVE
+
+It will perform some processing, and then wait for you
+to run one or more client programs (in other OS/2 windows):
+SHMCLIENT <command parameters>
+
+==============================================
+To Compile/Link:
+We used the IBM VisualAge C++ Compiler to produce these samples.
+To compile and link these files, simply type:
+nmake shmserve.mak
+
+==============================================
+Files required:
+
+SHMSERVE.EXE   Executable sample Server
+SHMCLIEN.EXE   Executable sample Client
+
+SHMSERVE.C     Source Code, Server
+SHMCLIEN.C     Source Code, Client
+SHMSERVE.H     Include File, Server and Client
+SHMSERVE.DEF   Link Definition File, Server
+SHMCLIEN.DEF   Link Definition File, Client
+SHMSERVE.MAK   make file
+
+READ.ME        These instructions
+==============================================
+
+You will find detailed documentation within the C programs themselves.
+
+In summary:
+
+    This code sample illustrates the usage of suballocated shared memory
+    between two or more processes.
+
+    shmserve.exe is the Server Process and should be running at all times.
+    shmclien.exe is the Client Process and can be run multiple times.
+
+    A Named-Shared memory segment, called SHMSERVE.SHM is created by the
+    Server Process.  It is fairly small and includes various control
+    values found in SERVERCONTROLREC.  During startup, the Server Process
+    sub-allocates an initial pool of shared memory, and prepares it for
+    suballocation.  The address of this pool of memory is stored in the
+    (smaller) Named-Shared memory segment for rapid access by clients.
+
+    When a Client Process is run, it attempts to read the Named-Shared
+    memory segment, whose presence signifies that a Server Process is
+    running.  The Client Process then tries to add some application
+    data (GLOM) to the pool of memory.
+
+    Suballocated memory is more efficient in the use/reuse of memory,
+    than static blocks/pages of memory, especially with dynamic data
+    usage patterns.
+
+    You can use the Client Process to Add, Delete, Read, or List
+    application (GLOM) data to/from the Shared memory area.
+
+    You can also inquire the values in the Server Control record.
+
+    Client Commands:
+       To add GLOM Data (Name and value):
+          SHMCLIEN A Glom_name glom_value
+       To delete 1st occurrence of GLOM Data (Name):
+          SHMCLIEN D Glom_name
+       To list GLOM Data (Names and values):
+          SHMCLIEN L
+       To Inquire the contents of the Server Control Record
+          SHMCLIEN I
+
+    You should be able to notice that Suballocation usage will
+       increase/decrease, as GLOM items are added/removed.
+    Each time you reach a certain threshold, additional memory
+       is allocated.
+
+    You should consider altering the values in the shmserve.h
+    file to see changes allocation behavior:
+
+#define INIT_SUBALLOC_MEM_SIZE    32768L
+might be changed to:
+#define INIT_SUBALLOC_MEM_SIZE    240L
+
+and
+
+#define GROW_SUBALLOC_MEM_SIZE    32768L
+might be changed to:
+#define GROW_SUBALLOC_MEM_SIZE    240L
+
+    Notice that this sample code includes additional logic to help
+    prevent multiple servers from running, as well as starting a server
+    process while old client processes are still hanging around:
+
+    Shared memory is controlled by the operating system layer maintaining
+    a usage-count (of processes).  Shared memory does not actually get
+    released until usage-count goes back to zero.  Therefore a server
+    process may be able to shut down and free its shared memory, but if
+    a client process is still running, then usage-count is non-zero and
+    the shared memory still exists.
+
+    The server process requires that it successfully Create the named
+    shared memory segment (not simply successfully open it).  Each
+    client process can only Open the named shared memory segment (not
+    Create), and requires that the original Server process be still
+    running.  Note that the original Server process indicates that it
+    has been shut down, when it changes the server control record,
+    Server_Status parameter to non-zero.  Clients require this value
+    to be zero, in order to successfully start up.
